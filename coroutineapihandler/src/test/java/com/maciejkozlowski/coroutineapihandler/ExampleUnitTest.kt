@@ -1,4 +1,4 @@
-package com.maciejkozlowski.coroutine.api.handler
+package com.maciejkozlowski.coroutineapihandler
 
 import org.junit.Test
 
