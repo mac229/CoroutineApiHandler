@@ -23,11 +23,11 @@ abstract class BaseApiRequestHandler<T>(private val parser: Parser<T>) {
         }
     }
 
-    suspend fun <T> handleRequest(request: suspend () -> T): ApiResponse<*> {
+    suspend fun <T> handleRequest(request: suspend () -> T): ApiResponse<T> {
         return try {
             ApiResponse.Success(request())
         } catch (throwable: Throwable) {
-            ApiResponse.Error<T>(mapToApiError(throwable))
+            ApiResponse.Error(mapToApiError(throwable))
         }
     }
 
