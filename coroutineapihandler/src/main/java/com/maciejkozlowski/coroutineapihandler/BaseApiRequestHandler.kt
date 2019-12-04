@@ -12,13 +12,17 @@ import java.net.HttpURLConnection
  * Created by Maciej Kozłowski on 2019-10-23.
  */
 
-abstract class BaseApiRequestHandler<T>(private val parser: Parser<T>) {
+abstract class BaseApiRequestHandler<T>(
+    private val parser: Parser<T>,
+    private val logger: ApiLogger? = null
+) {
 
     suspend fun <T> handleCompletableRequest(request: suspend () -> T): CompletableApiResponse {
         return try {
             request()
             CompletableApiResponse.Complete
         } catch (throwable: Throwable) {
+            logger?.logError(throwable)
             CompletableApiResponse.Error(mapToApiError(throwable))
         }
     }
