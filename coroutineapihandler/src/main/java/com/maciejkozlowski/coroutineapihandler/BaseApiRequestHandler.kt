@@ -31,6 +31,7 @@ abstract class BaseApiRequestHandler<T>(
         return try {
             ApiResponse.Success(request())
         } catch (throwable: Throwable) {
+            logger?.logError(throwable)
             ApiResponse.Error(mapToApiError(throwable))
         }
     }
