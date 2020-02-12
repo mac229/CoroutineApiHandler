@@ -13,8 +13,8 @@ import java.net.HttpURLConnection
  */
 
 abstract class BaseApiRequestHandler<T>(
-    private val parser: Parser<T>,
-    private val logger: ApiLogger? = null
+        private val parser: Parser<T>,
+        private val logger: ApiLogger? = null
 ) {
 
     suspend fun <T> handleCompletableRequest(request: suspend () -> T): CompletableApiResponse {
@@ -39,22 +39,23 @@ abstract class BaseApiRequestHandler<T>(
     private fun mapToApiError(throwable: Throwable): ApiError {
         return when (throwable) {
             is HttpException -> handleHttpException(throwable)
-            is IOException   -> ConnectionError
-            else             -> UnknownError(throwable)
+            is IOException   -> ConnectionError(ErrorResponse(throwable))
+            else             -> UnknownError
         }
     }
 
     private fun handleHttpException(exception: HttpException): ApiError {
         return when (exception.code()) {
             in (400 until 500) -> handleBadRequest(exception)
-            in (500 until 600) -> ServerError
-            else               -> UnknownError(exception)
+            in (500 until 600) -> ServerError(ErrorResponse(exception, exception.headers()))
+            else               -> UnknownError
         }
     }
 
     private fun handleBadRequest(exception: HttpException): ApiError {
+
         return when (exception.code()) {
-            HttpURLConnection.HTTP_UNAUTHORIZED -> UnauthorizedError
+            HttpURLConnection.HTTP_UNAUTHORIZED -> UnauthorizedError(ErrorResponse(exception, exception.headers()))
             else                                -> parseBadRequest(exception)
         }
     }
@@ -64,7 +65,7 @@ abstract class BaseApiRequestHandler<T>(
         return if (errors != null) {
             createRequestError(errors)
         } else {
-            UnknownError(exception)
+            UnknownError
         }
     }
 

@@ -1,3 +1,3 @@
 package com.maciejkozlowski.coroutineapihandler.errors
 
-object ServerError : ApiError
+class ServerError(errorResponse: ErrorResponse) : ApiError(errorResponse)

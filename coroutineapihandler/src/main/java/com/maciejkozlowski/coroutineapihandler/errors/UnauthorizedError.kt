@@ -1,3 +1,3 @@
 package com.maciejkozlowski.coroutineapihandler.errors
 
-object UnauthorizedError : ApiError
+class UnauthorizedError(errorResponse: ErrorResponse) : ApiError(errorResponse)
