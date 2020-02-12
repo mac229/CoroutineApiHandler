@@ -1,3 +1,3 @@
 package com.maciejkozlowski.coroutineapihandler.errors
 
-object UnknownError : ApiError()
+class UnknownError(errorResponse: ErrorResponse) : ApiError(errorResponse)

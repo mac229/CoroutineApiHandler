@@ -40,7 +40,7 @@ abstract class BaseApiRequestHandler<T>(
         return when (throwable) {
             is HttpException -> handleHttpException(throwable)
             is IOException   -> ConnectionError(ErrorResponse(throwable))
-            else             -> UnknownError
+            else             -> UnknownError(ErrorResponse(throwable))
         }
     }
 
@@ -48,7 +48,7 @@ abstract class BaseApiRequestHandler<T>(
         return when (exception.code()) {
             in (400 until 500) -> handleBadRequest(exception)
             in (500 until 600) -> ServerError(ErrorResponse(exception, exception.headers()))
-            else               -> UnknownError
+            else               -> UnknownError(ErrorResponse(exception))
         }
     }
 
@@ -65,7 +65,7 @@ abstract class BaseApiRequestHandler<T>(
         return if (errors != null) {
             createRequestError(errors)
         } else {
-            UnknownError
+            UnknownError(ErrorResponse(exception))
         }
     }
 
