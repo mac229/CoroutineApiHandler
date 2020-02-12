@@ -1,8 +1,3 @@
-/*
- * Copyright (c) 2020. CoinTracking.
- * Created by Alejandro Ramos, Citruslab, LLC
- */
-
 package com.maciejkozlowski.coroutineapihandler
 
 import okhttp3.Headers
