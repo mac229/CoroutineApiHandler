@@ -1,9 +1,5 @@
 package com.maciejkozlowski.coroutineapihandler
 
-import com.maciejkozlowski.coroutineapihandler.errors.*
-import com.maciejkozlowski.coroutineapihandler.reponse.ApiResponse
-import com.maciejkozlowski.coroutineapihandler.reponse.CompletableApiResponse
-import okhttp3.ResponseBody
 import retrofit2.HttpException
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -12,73 +8,62 @@ import java.net.HttpURLConnection
  * Created by Maciej Kozłowski on 2019-10-23.
  */
 
-abstract class BaseApiRequestHandler<T>(
-    private val parser: Parser<T>,
-    private val logger: ApiLogger? = null
-) {
+abstract class BaseApiRequestHandler<ERROR> {
 
-    suspend fun <T> handleCompletableRequest(request: suspend () -> T): CompletableApiResponse {
-        return try {
+    suspend fun <RESULT, DATA> handleCompletableRequest(
+        request: suspend () -> DATA,
+        onCompleted: () -> RESULT,
+        onError: (ERROR) -> RESULT,
+    ): RESULT =
+        try {
             request()
-            CompletableApiResponse.Complete
+            onCompleted()
         } catch (throwable: Throwable) {
-            logger?.logError(throwable)
-            CompletableApiResponse.Error(mapToApiError(throwable))
+            onError(
+                mapToApiError(throwable)
+            )
         }
-    }
 
-    suspend fun <T> handleRequest(request: suspend () -> T): ApiResponse<T> {
-        return try {
-            ApiResponse.Success(request())
+    suspend fun <RESULT, DATA> handleRequest(
+        request: suspend () -> DATA,
+        onSuccess: (DATA) -> RESULT,
+        onError: (ERROR) -> RESULT,
+    ): RESULT =
+        try {
+            onSuccess(request())
         } catch (throwable: Throwable) {
-            logger?.logError(throwable)
-            ApiResponse.Error(mapToApiError(throwable))
+            onError(
+                mapToApiError(throwable)
+            )
         }
-    }
 
-    private fun mapToApiError(throwable: Throwable): ApiError {
-        return when (throwable) {
+    private fun mapToApiError(throwable: Throwable): ERROR =
+        when (throwable) {
             is HttpException -> handleHttpException(throwable)
-            is IOException   -> ConnectionError
-            else             -> UnknownError(throwable)
+            is IOException   -> createConnectionError()
+            else             -> createUnknownError(throwable)
         }
-    }
 
-    private fun handleHttpException(exception: HttpException): ApiError {
-        return when (exception.code()) {
+    private fun handleHttpException(exception: HttpException): ERROR =
+        when (exception.code()) {
             in (400 until 500) -> handleBadRequest(exception)
-            in (500 until 600) -> ServerError
-            else               -> UnknownError(exception)
+            in (500 until 600) -> createServerError()
+            else               -> createUnknownError(exception)
         }
-    }
 
-    private fun handleBadRequest(exception: HttpException): ApiError {
-        return when (exception.code()) {
-            HttpURLConnection.HTTP_UNAUTHORIZED -> UnauthorizedError
-            else                                -> parseBadRequest(exception)
+    private fun handleBadRequest(exception: HttpException): ERROR =
+        when (exception.code()) {
+            HttpURLConnection.HTTP_UNAUTHORIZED -> createUnauthorizedError()
+            else                                -> createRequestError(exception)
         }
-    }
 
-    private fun parseBadRequest(exception: HttpException): ApiError {
-        val errors = parseErrorBodySafely(exception.response()?.errorBody())
-        return if (errors != null) {
-            createRequestError(errors)
-        } else {
-            UnknownError(exception)
-        }
-    }
+    protected abstract fun createUnauthorizedError(): ERROR
 
-    private fun parseErrorBodySafely(errorBody: ResponseBody?): T? {
-        return errorBody?.string()?.let(this::parseErrors)
-    }
+    protected abstract fun createConnectionError(): ERROR
 
-    protected abstract fun createRequestError(errors: T): ApiError
+    protected abstract fun createRequestError(exception: HttpException): ERROR
 
-    private fun parseErrors(json: String): T? {
-        return try {
-            parser.parseFromJson(json)
-        } catch (exception: Exception) {
-            null
-        }
-    }
+    protected abstract fun createServerError(): ERROR
+
+    protected abstract fun createUnknownError(throwable: Throwable): ERROR
 }
